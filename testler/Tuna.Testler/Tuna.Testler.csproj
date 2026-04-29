@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\kaynak\Tuna.Uygulama\Tuna.Uygulama.csproj" />
     <ProjectReference Include="..\..\kaynak\Tuna.Alan\Tuna.Alan.csproj" />
+    <ProjectReference Include="..\..\kaynak\Tuna.Raporlama\Tuna.Raporlama.csproj" />
   </ItemGroup>
 
 </Project>

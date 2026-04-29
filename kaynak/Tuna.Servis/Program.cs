@@ -16,7 +16,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 builder.Services.AddTunaUygulama();
 builder.Services.AddTunaAltyapi(builder.Configuration);
-builder.Services.AddSingleton<RaporKatalogu>();
+builder.Services.AddTunaRaporlama();
 
 var app = builder.Build();
 
@@ -34,6 +34,7 @@ app.MapAlisEndpointleri();
 app.MapSatisFaturaEndpointleri();
 app.MapFinansEndpointleri();
 app.MapDenetimEndpointleri();
+app.MapRaporlamaEndpointleri();
 
 app.MapGet("/saglik", () => Results.Ok(new { status = "ok", application = "Tuna" }))
     .WithName("Saglik");
@@ -47,10 +48,6 @@ system.MapGet("/moduller", (IModulKatalogu catalog) => catalog.GetModules())
 var migration = app.MapGroup("/api/aktarim").WithTags("Aktarim");
 migration.MapGet("/plan", (IAktarimPlaniSaglayici provider) => provider.GetPlan())
     .WithName("AktarimPlaniniGetir");
-
-var reporting = app.MapGroup("/api/raporlar").WithTags("Raporlama");
-reporting.MapGet("/", (RaporKatalogu catalog) => catalog.GetInitialReports())
-    .WithName("RaporlariGetir");
 
 var outbox = app.MapGroup("/api/kuyruk").WithTags("Kuyruk");
 outbox.MapGet("/bekleyen", async (IKuyrukDeposu store, CancellationToken cancellationToken) =>
