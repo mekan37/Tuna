@@ -11,6 +11,12 @@ public static class DependencyInjection
         services.AddSingleton<IBaslangicHazirlikServisi, BaslangicHazirlikServisi>();
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<UrunKatalogServisi>();
+        services.AddScoped<CariHesapServisi>();
+        services.AddScoped<StokServisi>();
+        services.AddScoped<SatisSiparisServisi>();
+        services.AddScoped<AlisFaturaServisi>();
+        services.AddScoped<SatisFaturaServisi>();
+        services.AddScoped<FinansServisi>();
         return services;
     }
 }

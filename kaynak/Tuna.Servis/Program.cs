@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Tuna.Alan;
 using Tuna.Altyapi;
 using Tuna.Raporlama;
@@ -9,6 +10,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 builder.Services.AddTunaUygulama();
 builder.Services.AddTunaAltyapi(builder.Configuration);
 builder.Services.AddSingleton<RaporKatalogu>();
@@ -22,6 +27,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapKatalogEndpointleri();
+app.MapCariEndpointleri();
+app.MapStokEndpointleri();
+app.MapSatisEndpointleri();
+app.MapAlisEndpointleri();
+app.MapSatisFaturaEndpointleri();
+app.MapFinansEndpointleri();
 
 app.MapGet("/saglik", () => Results.Ok(new { status = "ok", application = "Tuna" }))
     .WithName("Saglik");
