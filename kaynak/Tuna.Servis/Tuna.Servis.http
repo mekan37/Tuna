@@ -1,0 +1,6 @@
+@Tuna.Servis_HostAddress = http://localhost:5196
+
+GET {{Tuna.Servis_HostAddress}}/saglik
+Accept: application/json
+
+###
