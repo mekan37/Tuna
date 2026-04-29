@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddSingleton<IAlisFaturaDeposu, BellekAlisFaturaDeposu>();
         services.AddSingleton<ISatisFaturaDeposu, BellekSatisFaturaDeposu>();
         services.AddSingleton<IFinansHareketDeposu, BellekFinansHareketDeposu>();
+        services.AddSingleton<IDenetimKayitDeposu, BellekDenetimKayitDeposu>();
         return services;
     }
 }

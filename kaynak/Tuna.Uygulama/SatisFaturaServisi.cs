@@ -9,6 +9,7 @@ public sealed class SatisFaturaServisi
     private readonly IUrunDeposu _urunDeposu;
     private readonly IStokDeposu _stokDeposu;
     private readonly IFinansHareketDeposu _finansHareketDeposu;
+    private readonly DenetimServisi _denetimServisi;
     private readonly TimeProvider _timeProvider;
 
     public SatisFaturaServisi(
@@ -17,6 +18,7 @@ public sealed class SatisFaturaServisi
         IUrunDeposu urunDeposu,
         IStokDeposu stokDeposu,
         IFinansHareketDeposu finansHareketDeposu,
+        DenetimServisi denetimServisi,
         TimeProvider timeProvider)
     {
         _faturaDeposu = faturaDeposu;
@@ -24,6 +26,7 @@ public sealed class SatisFaturaServisi
         _urunDeposu = urunDeposu;
         _stokDeposu = stokDeposu;
         _finansHareketDeposu = finansHareketDeposu;
+        _denetimServisi = denetimServisi;
         _timeProvider = timeProvider;
     }
 
@@ -119,6 +122,14 @@ public sealed class SatisFaturaServisi
             now);
 
         await _finansHareketDeposu.EkleAsync(finansHareketi, cancellationToken);
+
+        await _denetimServisi.KaydetAsync(new DenetimKaydiOlusturIstegi(
+            "Satis",
+            DenetimIslemTuru.Olusturma,
+            nameof(SatisFaturasi),
+            fatura.Id.ToString(),
+            $"satis.fatura:{fatura.FaturaNo}",
+            $"Satis faturasi olusturuldu. Genel tutar: {fatura.GenelTutar}"), cancellationToken);
 
         return UygulamaSonucu<SatisFaturaOzeti>.BasariliSonuc(fatura.Ozetle());
     }

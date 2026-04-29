@@ -14,7 +14,7 @@ public sealed class FinansServisiTestleri
             FinansHareketi.Olustur(cari, FinansHareketTuru.SatisFaturasi, 100, 0, "test", null, DateTimeOffset.UtcNow),
             FinansHareketi.Olustur(cari, FinansHareketTuru.Tahsilat, 0, 40, "test", null, DateTimeOffset.UtcNow)
         ]);
-        var servis = new FinansServisi(finansDeposu, cariDeposu, TimeProvider.System);
+        var servis = new FinansServisi(finansDeposu, cariDeposu, new DenetimServisi(new TestDenetimKayitDeposu(), TimeProvider.System), TimeProvider.System);
 
         var sonuc = await servis.CariBakiyeGetirAsync(cari.Id, CancellationToken.None);
 
@@ -27,7 +27,7 @@ public sealed class FinansServisiTestleri
     [Fact]
     public async Task Bilinmeyen_cari_icin_bakiye_reddedilir()
     {
-        var servis = new FinansServisi(new TestFinansHareketDeposu([]), new TestCariHesapDeposu([]), TimeProvider.System);
+        var servis = new FinansServisi(new TestFinansHareketDeposu([]), new TestCariHesapDeposu([]), new DenetimServisi(new TestDenetimKayitDeposu(), TimeProvider.System), TimeProvider.System);
 
         var sonuc = await servis.CariBakiyeGetirAsync(Guid.NewGuid(), CancellationToken.None);
 
@@ -40,14 +40,17 @@ public sealed class FinansServisiTestleri
     {
         var cari = CariHesap.Olustur("MUS-001", "Test Musteri", null, null, null, 0, DateTimeOffset.UtcNow);
         var finansDeposu = new TestFinansHareketDeposu([]);
-        var servis = new FinansServisi(finansDeposu, new TestCariHesapDeposu([cari]), TimeProvider.System);
+        var denetimDeposu = new TestDenetimKayitDeposu();
+        var servis = new FinansServisi(finansDeposu, new TestCariHesapDeposu([cari]), new DenetimServisi(denetimDeposu, TimeProvider.System), TimeProvider.System);
 
         var sonuc = await servis.TahsilatOlusturAsync(new FinansHareketOlusturIstegi(cari.Id, 75, "kasa", "nakit tahsilat"), CancellationToken.None);
+        var denetimKayitlari = await denetimDeposu.ListeleAsync("Finans", nameof(FinansHareketi), null, 10, CancellationToken.None);
 
         Assert.True(sonuc.Basarili);
         Assert.Equal(FinansHareketTuru.Tahsilat, sonuc.Deger!.Tur);
         Assert.Equal(0, sonuc.Deger.Borc);
         Assert.Equal(75, sonuc.Deger.Alacak);
+        Assert.Single(denetimKayitlari);
     }
 
     [Fact]
@@ -55,7 +58,7 @@ public sealed class FinansServisiTestleri
     {
         var cari = CariHesap.Olustur("TED-001", "Test Tedarikci", null, null, null, 0, DateTimeOffset.UtcNow);
         var finansDeposu = new TestFinansHareketDeposu([]);
-        var servis = new FinansServisi(finansDeposu, new TestCariHesapDeposu([cari]), TimeProvider.System);
+        var servis = new FinansServisi(finansDeposu, new TestCariHesapDeposu([cari]), new DenetimServisi(new TestDenetimKayitDeposu(), TimeProvider.System), TimeProvider.System);
 
         var sonuc = await servis.OdemeOlusturAsync(new FinansHareketOlusturIstegi(cari.Id, 50, "banka", "havale"), CancellationToken.None);
 
@@ -108,6 +111,29 @@ public sealed class FinansServisiTestleri
         public Task EkleAsync(FinansHareketi hareket, CancellationToken cancellationToken)
         {
             _hareketler.Add(hareket);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class TestDenetimKayitDeposu : IDenetimKayitDeposu
+    {
+        private readonly List<DenetimKaydi> _kayitlar = [];
+
+        public Task<IReadOnlyList<DenetimKaydi>> ListeleAsync(string? modul, string? varlikTuru, string? varlikId, int limit, CancellationToken cancellationToken)
+        {
+            var sonuc = _kayitlar
+                .Where(kayit => modul is null || kayit.Modul == modul)
+                .Where(kayit => varlikTuru is null || kayit.VarlikTuru == varlikTuru)
+                .Where(kayit => varlikId is null || kayit.VarlikId == varlikId)
+                .Take(limit)
+                .ToArray();
+
+            return Task.FromResult<IReadOnlyList<DenetimKaydi>>(sonuc);
+        }
+
+        public Task EkleAsync(DenetimKaydi kayit, CancellationToken cancellationToken)
+        {
+            _kayitlar.Add(kayit);
             return Task.CompletedTask;
         }
     }

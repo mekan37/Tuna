@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<AlisFaturaServisi>();
         services.AddScoped<SatisFaturaServisi>();
         services.AddScoped<FinansServisi>();
+        services.AddScoped<DenetimServisi>();
         return services;
     }
 }

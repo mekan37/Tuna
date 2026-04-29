@@ -6,12 +6,14 @@ public sealed class FinansServisi
 {
     private readonly IFinansHareketDeposu _finansHareketDeposu;
     private readonly ICariHesapDeposu _cariHesapDeposu;
+    private readonly DenetimServisi _denetimServisi;
     private readonly TimeProvider _timeProvider;
 
-    public FinansServisi(IFinansHareketDeposu finansHareketDeposu, ICariHesapDeposu cariHesapDeposu, TimeProvider timeProvider)
+    public FinansServisi(IFinansHareketDeposu finansHareketDeposu, ICariHesapDeposu cariHesapDeposu, DenetimServisi denetimServisi, TimeProvider timeProvider)
     {
         _finansHareketDeposu = finansHareketDeposu;
         _cariHesapDeposu = cariHesapDeposu;
+        _denetimServisi = denetimServisi;
         _timeProvider = timeProvider;
     }
 
@@ -79,6 +81,14 @@ public sealed class FinansServisi
             _timeProvider.GetUtcNow());
 
         await _finansHareketDeposu.EkleAsync(hareket, cancellationToken);
+        await _denetimServisi.KaydetAsync(new DenetimKaydiOlusturIstegi(
+            "Finans",
+            DenetimIslemTuru.Olusturma,
+            nameof(FinansHareketi),
+            hareket.Id.ToString(),
+            hareket.Kaynak,
+            $"{hareket.Tur} hareketi olusturuldu. Borc: {hareket.Borc}, Alacak: {hareket.Alacak}"), cancellationToken);
+
         return UygulamaSonucu<FinansHareketOzeti>.BasariliSonuc(hareket.Ozetle());
     }
 

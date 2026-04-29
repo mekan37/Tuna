@@ -12,7 +12,8 @@ public sealed class SatisFaturaServisiTestleri
         var urun = Urun.Olustur("URUN-001", "Test Urun", null, null, 10, DateTimeOffset.UtcNow);
         var stokDeposu = new TestStokDeposu([StokGiris(urun, 10)]);
         var finansDeposu = new TestFinansHareketDeposu();
-        var servis = ServisOlustur([cari], [urun], stokDeposu, finansDeposu);
+        var denetimDeposu = new TestDenetimKayitDeposu();
+        var servis = ServisOlustur([cari], [urun], stokDeposu, finansDeposu, denetimDeposu);
 
         var sonuc = await servis.OlusturAsync(new SatisFaturaOlusturIstegi(
             "sf-001",
@@ -22,6 +23,7 @@ public sealed class SatisFaturaServisiTestleri
 
         var hareketler = await stokDeposu.UrunHareketleriAsync(urun.Id, "ANA", CancellationToken.None);
         var finansHareketleri = await finansDeposu.CariHareketleriAsync(cari.Id, CancellationToken.None);
+        var denetimKayitlari = await denetimDeposu.ListeleAsync("Satis", nameof(SatisFaturasi), null, 10, CancellationToken.None);
 
         Assert.True(sonuc.Basarili);
         Assert.Equal("SF-001", sonuc.Deger!.FaturaNo);
@@ -31,6 +33,7 @@ public sealed class SatisFaturaServisiTestleri
         Assert.Equal(7, hareketler.Sum(hareket => hareket.BakiyeEtkisi));
         Assert.Single(finansHareketleri);
         Assert.Equal(330, finansHareketleri.Single().Borc);
+        Assert.Single(denetimKayitlari);
     }
 
     [Fact]
@@ -38,7 +41,7 @@ public sealed class SatisFaturaServisiTestleri
     {
         var cari = CariHesap.Olustur("MUS-001", "Test Musteri", null, null, null, 0, DateTimeOffset.UtcNow);
         var urun = Urun.Olustur("URUN-001", "Test Urun", null, null, 10, DateTimeOffset.UtcNow);
-        var servis = ServisOlustur([cari], [urun], new TestStokDeposu([StokGiris(urun, 1)]), new TestFinansHareketDeposu());
+        var servis = ServisOlustur([cari], [urun], new TestStokDeposu([StokGiris(urun, 1)]), new TestFinansHareketDeposu(), new TestDenetimKayitDeposu());
 
         var sonuc = await servis.OlusturAsync(new SatisFaturaOlusturIstegi(
             "SF-001",
@@ -55,7 +58,7 @@ public sealed class SatisFaturaServisiTestleri
     {
         var cari = CariHesap.Olustur("MUS-001", "Test Musteri", null, null, null, 0, DateTimeOffset.UtcNow);
         var urun = Urun.Olustur("URUN-001", "Test Urun", null, null, 10, DateTimeOffset.UtcNow);
-        var servis = ServisOlustur([cari], [urun], new TestStokDeposu([StokGiris(urun, 10)]), new TestFinansHareketDeposu());
+        var servis = ServisOlustur([cari], [urun], new TestStokDeposu([StokGiris(urun, 10)]), new TestFinansHareketDeposu(), new TestDenetimKayitDeposu());
         var istek = new SatisFaturaOlusturIstegi("SF-001", cari.Id, "ANA", [new SatisFaturaSatirOlusturIstegi(urun.Id, 1, 100)]);
 
         await servis.OlusturAsync(istek, CancellationToken.None);
@@ -69,7 +72,7 @@ public sealed class SatisFaturaServisiTestleri
     public async Task Cari_hesap_yoksa_satis_faturasi_reddedilir()
     {
         var urun = Urun.Olustur("URUN-001", "Test Urun", null, null, 10, DateTimeOffset.UtcNow);
-        var servis = ServisOlustur([], [urun], new TestStokDeposu([StokGiris(urun, 10)]), new TestFinansHareketDeposu());
+        var servis = ServisOlustur([], [urun], new TestStokDeposu([StokGiris(urun, 10)]), new TestFinansHareketDeposu(), new TestDenetimKayitDeposu());
 
         var sonuc = await servis.OlusturAsync(new SatisFaturaOlusturIstegi(
             "SF-001",
@@ -88,12 +91,13 @@ public sealed class SatisFaturaServisiTestleri
         IReadOnlyList<CariHesap> cariler,
         IReadOnlyList<Urun> urunler,
         TestStokDeposu stokDeposu,
-        TestFinansHareketDeposu finansDeposu)
+        TestFinansHareketDeposu finansDeposu,
+        TestDenetimKayitDeposu denetimDeposu)
     {
         var faturaDeposu = new TestSatisFaturaDeposu();
         var cariDeposu = new TestCariHesapDeposu(cariler);
         var urunDeposu = new TestUrunDeposu(urunler);
-        return new SatisFaturaServisi(faturaDeposu, cariDeposu, urunDeposu, stokDeposu, finansDeposu, TimeProvider.System);
+        return new SatisFaturaServisi(faturaDeposu, cariDeposu, urunDeposu, stokDeposu, finansDeposu, new DenetimServisi(denetimDeposu, TimeProvider.System), TimeProvider.System);
     }
 
     private sealed class TestSatisFaturaDeposu : ISatisFaturaDeposu
@@ -205,6 +209,29 @@ public sealed class SatisFaturaServisiTestleri
         public Task EkleAsync(FinansHareketi hareket, CancellationToken cancellationToken)
         {
             _hareketler.Add(hareket);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class TestDenetimKayitDeposu : IDenetimKayitDeposu
+    {
+        private readonly List<DenetimKaydi> _kayitlar = [];
+
+        public Task<IReadOnlyList<DenetimKaydi>> ListeleAsync(string? modul, string? varlikTuru, string? varlikId, int limit, CancellationToken cancellationToken)
+        {
+            var sonuc = _kayitlar
+                .Where(kayit => modul is null || kayit.Modul == modul)
+                .Where(kayit => varlikTuru is null || kayit.VarlikTuru == varlikTuru)
+                .Where(kayit => varlikId is null || kayit.VarlikId == varlikId)
+                .Take(limit)
+                .ToArray();
+
+            return Task.FromResult<IReadOnlyList<DenetimKaydi>>(sonuc);
+        }
+
+        public Task EkleAsync(DenetimKaydi kayit, CancellationToken cancellationToken)
+        {
+            _kayitlar.Add(kayit);
             return Task.CompletedTask;
         }
     }

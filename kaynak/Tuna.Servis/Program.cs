@@ -33,6 +33,7 @@ app.MapSatisEndpointleri();
 app.MapAlisEndpointleri();
 app.MapSatisFaturaEndpointleri();
 app.MapFinansEndpointleri();
+app.MapDenetimEndpointleri();
 
 app.MapGet("/saglik", () => Results.Ok(new { status = "ok", application = "Tuna" }))
     .WithName("Saglik");

@@ -9,6 +9,7 @@ public sealed class AlisFaturaServisi
     private readonly IUrunDeposu _urunDeposu;
     private readonly IStokDeposu _stokDeposu;
     private readonly IFinansHareketDeposu _finansHareketDeposu;
+    private readonly DenetimServisi _denetimServisi;
     private readonly TimeProvider _timeProvider;
 
     public AlisFaturaServisi(
@@ -17,6 +18,7 @@ public sealed class AlisFaturaServisi
         IUrunDeposu urunDeposu,
         IStokDeposu stokDeposu,
         IFinansHareketDeposu finansHareketDeposu,
+        DenetimServisi denetimServisi,
         TimeProvider timeProvider)
     {
         _faturaDeposu = faturaDeposu;
@@ -24,6 +26,7 @@ public sealed class AlisFaturaServisi
         _urunDeposu = urunDeposu;
         _stokDeposu = stokDeposu;
         _finansHareketDeposu = finansHareketDeposu;
+        _denetimServisi = denetimServisi;
         _timeProvider = timeProvider;
     }
 
@@ -112,6 +115,14 @@ public sealed class AlisFaturaServisi
             now);
 
         await _finansHareketDeposu.EkleAsync(finansHareketi, cancellationToken);
+
+        await _denetimServisi.KaydetAsync(new DenetimKaydiOlusturIstegi(
+            "Alis",
+            DenetimIslemTuru.Olusturma,
+            nameof(AlisFaturasi),
+            fatura.Id.ToString(),
+            $"alis.fatura:{fatura.FaturaNo}",
+            $"Alis faturasi olusturuldu. Genel tutar: {fatura.GenelTutar}"), cancellationToken);
 
         return UygulamaSonucu<AlisFaturaOzeti>.BasariliSonuc(fatura.Ozetle());
     }
